@@ -39,5 +39,5 @@ to test this and determine if it also fits their environment.
 
 Special Thanks
 --------------
-A very special thanks to @rustymyers as he was very helpful in determinining how AD
+A very special thanks to @rustymyers as he was very helpful in determining how AD
 stores the Time.
