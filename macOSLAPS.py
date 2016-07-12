@@ -22,7 +22,6 @@ from __future__ import print_function
 from Foundation import CFPreferencesCopyAppValue
 from random import randint, choice
 from datetime import datetime, timedelta
-from socket import gethostname
 from string import ascii_letters, punctuation, digits
 from subprocess import check_output, PIPE
 from time import mktime
@@ -54,12 +53,13 @@ def main():
                            '-read', '/', 'SubNodes'], stderr=PIPE)[10:-1]
     # Password Length
     pass_length = get_config_settings('PasswordLength')
-    # Get Computer Hostname
-    computer = gethostname()
+    # Get Computer Name in Active Directory
+    computer = check_output(['/usr/bin/dscl', '/Active Directory/EDUC',
+                             '-read', '/', 'AccountName'], stderr=PIPE)[13:-1]
     # Active Directory Path
     ad_path = '/Active Directory/{0:}/All Domains'.format(domain)
     # Computer Path
-    computer_path = 'Computers/{0:}$'.format(computer)
+    computer_path = 'Computers/{0:}'.format(computer)
     # LAPS Attributes
     attributes = dict()
     attributes[0] = 'dsAttrTypeNative:ms-Mcs-AdmPwd'
@@ -68,12 +68,22 @@ def main():
     try:
         expiration_time = check_output(['/usr/bin/dscl', ad_path, '-read',
                                         computer_path, attributes[1]],
-                                       stderr=PIPE)
+                                       stderr=PIPE)[46:-1]
+        # If this machine has never had LAPS enabled set
+        # a default expiration time of 1/1/2001
+        if expiration_time == '':
+            logging.info('Machine has never had LAPS set. Setting'
+                         ' default expiration date of 01/01/2001 to force'
+                         ' a password change...')
+            check_output(['/usr/bin/dscl', ad_path, '-append',
+                          computer_path, attributes[1], '126227988000000000'],
+                         stderr=PIPE)
+            expiration_time = '126227988000000000'
     except StandardError as error:
         logging.error(error)
         exit(1)
     # Convert Windows Time to Epoch Time
-    format_expiration_time = (int(expiration_time[46:])/10000000-11644473600)
+    format_expiration_time = int(expiration_time)/10000000-11644473600
     # Change to TimeStamp
     format_expiration_time = datetime.fromtimestamp(format_expiration_time)
     # Determine if the password expired and then change it
