@@ -54,7 +54,7 @@ def main():
                            '-read', '/', 'SubNodes'], stderr=PIPE)[10:-1]
     # Password Length
     pass_length = get_config_settings('PasswordLength')
-    # Computer Name
+    # Get Computer Hostname
     computer = gethostname()
     # Active Directory Path
     ad_path = '/Active Directory/{0:}/All Domains'.format(domain)
@@ -64,8 +64,6 @@ def main():
     attributes = dict()
     attributes[0] = 'dsAttrTypeNative:ms-Mcs-AdmPwd'
     attributes[1] = 'dsAttrTypeNative:ms-Mcs-AdmPwdExpirationTime'
-    # Characters used for random password
-    characters = ascii_letters + punctuation + digits
     # Get Computer Name
     try:
         expiration_time = check_output(['/usr/bin/dscl', ad_path, '-read',
@@ -82,6 +80,9 @@ def main():
     if format_expiration_time < now:
         # Log that the password change is being started
         logging.info('Password change required. Performing password change..')
+        # Characters used for random password
+        characters = ascii_letters + punctuation + digits
+        # Create random password
         password = "".join(choice(characters)
                            for x in range(randint(pass_length, pass_length)))
         try:
