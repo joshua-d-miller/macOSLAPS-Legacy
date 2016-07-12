@@ -36,3 +36,8 @@ Feedback
 --------
 I have only so far tested this in my environment so I would love for other people
 to test this and determine if it also fits their environment.
+
+Special Thanks
+--------------
+A very special thanks to @rustymyers as he was very helpful in determinining how AD
+stores the Time.
