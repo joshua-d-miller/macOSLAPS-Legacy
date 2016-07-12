@@ -64,7 +64,7 @@ def main():
     attributes = dict()
     attributes[0] = 'dsAttrTypeNative:ms-Mcs-AdmPwd'
     attributes[1] = 'dsAttrTypeNative:ms-Mcs-AdmPwdExpirationTime'
-    # Get Computer Name
+    # Get Expiration Time of Password
     try:
         expiration_time = check_output(['/usr/bin/dscl', ad_path, '-read',
                                         computer_path, attributes[1]],
