@@ -54,8 +54,9 @@ def main():
     # Password Length
     pass_length = get_config_settings('PasswordLength')
     # Get Computer Name in Active Directory
-    computer = check_output(['/usr/bin/dscl', '/Active Directory/EDUC',
-                             '-read', '/', 'AccountName'], stderr=PIPE)[13:-1]
+    computer = check_output(['/usr/bin/dscl',
+                            '/Active Directory/{0:}'.format(domain),
+                            '-read', '/', 'AccountName'], stderr=PIPE)[13:-1]
     # Active Directory Path
     ad_path = '/Active Directory/{0:}/All Domains'.format(domain)
     # Computer Path
