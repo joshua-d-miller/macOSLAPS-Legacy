@@ -6,27 +6,28 @@
   <string>edu.psu.macoslaps-check</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/usr/bin/python</string>
-    <string>/usr/local/laps/macOSLAPS.py</string>
+    <string>/usr/local/laps/macOSLAPS</string>
   </array>
   <key>StartCalendarInterval</key>
-  <dict>
-    <key>Minute</key>
-    <integer>0</integer>
-    <key>Hour</key>
-    <integer>9</integer>
-  </dict>
-  <dict>
-    <key>Minute</key>
-    <integer>0</integer>
-    <key>Hour</key>
-    <integer>13</integer>
-  </dict>
-  <dict>
-    <key>Minute</key>
-    <integer>0</integer>
-    <key>Hour</key>
-    <integer>16</integer>
-  </dict>
+  <array>
+    <dict>
+      <key>Minute</key>
+      <integer>0</integer>
+      <key>Hour</key>
+      <integer>9</integer>
+    </dict>
+    <dict>
+      <key>Minute</key>
+      <integer>0</integer>
+      <key>Hour</key>
+      <integer>13</integer>
+    </dict>
+    <dict>
+      <key>Minute</key>
+      <integer>0</integer>
+      <key>Hour</key>
+      <integer>16</integer>
+    </dict>
+  </array>
 </dict>
 </plist>

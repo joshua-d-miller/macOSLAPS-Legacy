@@ -55,8 +55,8 @@ def main():
     pass_length = get_config_settings('PasswordLength')
     # Get Computer Name in Active Directory
     computer = check_output(['/usr/bin/dscl',
-                            '/Active Directory/{0:}'.format(domain),
-                            '-read', '/', 'AccountName'], stderr=PIPE)[13:-1]
+                             '/Active Directory/{0:}'.format(domain),
+                             '-read', '/', 'AccountName'], stderr=PIPE)[13:-1]
     # Active Directory Path
     ad_path = '/Active Directory/{0:}/All Domains'.format(domain)
     # Computer Path
@@ -76,10 +76,10 @@ def main():
             logging.info('Machine has never had LAPS set. Setting'
                          ' default expiration date of 01/01/2001 to force'
                          ' a password change...')
-            check_output(['/usr/bin/dscl', ad_path, '-append',
-                          computer_path, attributes[1], '126227988000000000'],
-                         stderr=PIPE)
             expiration_time = '126227988000000000'
+            check_output(['/usr/bin/dscl', ad_path, '-append',
+                          computer_path, attributes[1], expiration_time],
+                         stderr=PIPE)
     except StandardError as error:
         logging.error(error)
         exit(1)
