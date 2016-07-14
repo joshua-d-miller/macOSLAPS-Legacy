@@ -8,143 +8,192 @@ __________________________________________________________________________
 | behavior of Local Administrator Password Solution (LAPS) on Windows.   |
 | Once completed, an expiration date will then be set for the new        |
 | password and written to the AD attribute dsAttrTypeNative:ms-Mcs-      |
-| AdmPwdExpirationTime. This will allow the LAPS UI to be utilized and   |
-| the random password the ability to be seen by those with permission to |
-| retrieve it.                                                           |
+| AdmPwdself.expirationTime. This will allow the LAPS UI to be utilized  |
+| and the random password the ability to be seen by those with permission|
+| to retrieve it.                                                        |
 |________________________________________________________________________|
 Joshua D. Miller - josh@psu.edu - The Pennsylvania State University
-Script was Last Updated July 8, 2016
-
-Preference code from Jaharmi's Read preferences from
-property list'''
-
+Script was Last Updated July 14, 2016'''
+# pylint: disable=C0103
 from __future__ import print_function
-from Foundation import CFPreferencesCopyAppValue
-from random import randint, choice
 from datetime import datetime, timedelta
 from string import ascii_letters, punctuation, digits
-from subprocess import check_output, PIPE
 from time import mktime
 import logging
+import random
+# pylint: disable=E0611
+from Foundation import CFPreferencesCopyAppValue
+from OpenDirectory import ODSession, ODNode, kODRecordTypeComputers, \
+                          kODRecordTypeUsers
+from SystemConfiguration import SCDynamicStoreCreate, \
+                                SCDynamicStoreCopyValue
 
-BUNDLE_ID = 'edu.psu.macoslaps'
 
-DEFAULT_PREFERENCES = {
-    'LocalAdminAccount': 'admin',
-    'PasswordLength': 8,
-    'DaysTillExpiration': 60
-}
-
-
-def main():
-    '''main function'''
-    # Log
+class macOSLAPS(object):
+    '''main class of application'''
+    # Current time
+    now = datetime.now()
+    # Preference Variables
+    bundleid = 'edu.psu.macoslaps'
+    defaultpreferences = {
+        'LocalAdminAccount': 'admin',
+        'PasswordLength': 8,
+        'DaysTillExpiration': 60
+    }
+    # Active Directory Attributes
+    adpath = ''
+    computerpath = ''
+    expirationtime = ''
+    lapsattributes = dict()
+    computer_record = None
+    # Setup Logging
     logging.basicConfig(filename='/Library/Logs/macOSLAPS.log',
                         level=logging.DEBUG,
                         format='%(asctime)s|%(levelname)s:%(message)s')
-    # Get the current time
-    now = datetime.now()
-    # Local Admin Account
-    admin = get_config_settings('LocalAdminAccount')
-    # Days till expiration
-    exp_days = get_config_settings('DaysTillExpiration')
-    # Get Domain Name
-    domain = check_output(['/usr/bin/dscl', '/Active Directory/',
-                           '-read', '/', 'SubNodes'], stderr=PIPE)[10:-1]
-    # Password Length
-    pass_length = get_config_settings('PasswordLength')
-    # Get Computer Name in Active Directory
-    computer = check_output(['/usr/bin/dscl',
-                             '/Active Directory/{0:}'.format(domain),
-                             '-read', '/', 'AccountName'], stderr=PIPE)[13:-1]
-    # Active Directory Path
-    ad_path = '/Active Directory/{0:}/All Domains'.format(domain)
-    # Computer Path
-    computer_path = 'Computers/{0:}'.format(computer)
-    # LAPS Attributes
-    attributes = dict()
-    attributes[0] = 'dsAttrTypeNative:ms-Mcs-AdmPwd'
-    attributes[1] = 'dsAttrTypeNative:ms-Mcs-AdmPwdExpirationTime'
-    # Get Expiration Time of Password
-    try:
-        expiration_time = check_output(['/usr/bin/dscl', ad_path, '-read',
-                                        computer_path, attributes[1]],
-                                       stderr=PIPE)[46:-1]
-        # If this machine has never had LAPS enabled set
-        # a default expiration time of 1/1/2001
-        if expiration_time == '':
-            logging.info('Machine has never had LAPS set. Setting'
-                         ' default expiration date of 01/01/2001 to force'
-                         ' a password change...')
-            expiration_time = '126227988000000000'
-            check_output(['/usr/bin/dscl', ad_path, '-append',
-                          computer_path, attributes[1], expiration_time],
-                         stderr=PIPE)
-    except StandardError as error:
-        logging.error(error)
-        exit(1)
-    # Convert Windows Time to Epoch Time
-    format_expiration_time = int(expiration_time)/10000000-11644473600
-    # Change to TimeStamp
-    format_expiration_time = datetime.fromtimestamp(format_expiration_time)
-    # Determine if the password expired and then change it
-    if format_expiration_time < now:
-        # Log that the password change is being started
-        logging.info('Password change required. Performing password change..')
+
+
+    def get_config_settings(self, preference_key):
+        '''Function to retrieve configuration settings from
+        /Library/Preferences or /Library/Managed Preferences
+        '''
+        preference_file = self.bundleid
+        preference_value = CFPreferencesCopyAppValue(preference_key,
+                                                     preference_file)
+        if preference_value == None:
+            preference_value = self.defaultpreferences.get(preference_key)
+        return preference_value
+
+
+    def connect_to_ad(self):
+        '''Function to connect and pull information from Active Directory
+        some code borrowed from AD PassMon - Thanks @macmuleblog'''
+        # Active Directory Connection and Extraction of Data
+        # Code borrowed from AD PassMon to get AD info
+        try:
+            # Create Net Config
+            net_config = SCDynamicStoreCreate(None, "net", None, None)
+            # Get Active Directory Info
+            ad_info = \
+            dict(SCDynamicStoreCopyValue
+                 (net_config, 'com.apple.opendirectoryd.ActiveDirectory'))
+            # Create Active Directory Path
+            self.adpath = '{0:}/{1:}'.format(ad_info['NodeName'],
+                                             ad_info['DomainNameDns'])
+            # Computer Path
+            self.computerpath = 'Computers/{0:}'.format(ad_info['TrustAccount'])
+            # Use Open Directory To Connect to Active Directory
+            node, error = ODNode.nodeWithSession_name_error_\
+            (ODSession.defaultSession(), self.adpath, None)
+            # Grab the Computer Record
+            self.computer_record, error = \
+            node.recordWithRecordType_name_attributes_error_\
+            (kODRecordTypeComputers, ad_info['TrustAccount'], None, None)
+            # Convert to Readable Values
+            values, error = self.computer_record.\
+            recordDetailsForAttributes_error_(None, None)
+            # LAPS Attributes
+            self.lapsattributes[0] = 'dsAttrTypeNative:ms-Mcs-AdmPwd'
+            self.lapsattributes[1] = 'dsAttrTypeNative:ms-Mcs-AdmPwdExpirationTime'
+            # Get Expiration Time of Password
+            self.expirationtime = values[self.lapsattributes[1]]
+            # If this machine has never had LAPS enabled set
+            # a default expiration time of 1/1/2001
+            if self.expirationtime == '':
+                logging.info('Machine has never had LAPS set. Setting'
+                             ' default expiration date of 01/01/2001 to force'
+                             ' a password change...')
+                self.expirationtime = '126227988000000000'
+        # pylint: disable=W0703
+        except Exception as error:
+            logging.error(error)
+            exit(1)
+
+    @staticmethod
+    def make_random_password(length):
+        '''Generate a Random Password
+        Thanks Mike Lynn - @frogor'''
         # Characters used for random password
         characters = ascii_letters + punctuation + digits
-        # Create random password
-        password = "".join(choice(characters)
-                           for x in range(randint(pass_length, pass_length)))
-        try:
-            # Remove AD LAPS Password using Computer Account
-            logging.info('Removing old password from Active Directory...')
-            check_output(['/usr/bin/dscl', ad_path, '-delete',
-                          computer_path, attributes[0]], stderr=PIPE)
-            # Change the local admin password
-            logging.info('Setting random password for local'
-                         ' admin account %s', admin)
-            check_output(['/usr/bin/dscl', '.', 'passwd',
-                          '/Users/{0:}'.format(admin), password], stderr=PIPE)
-            # Re-add the LAPS Password using Computer Account
-            logging.info('Writing new password to Active Directory...')
-            check_output(['/usr/bin/dscl', ad_path, '-append', computer_path,
-                          attributes[0], password], stderr=PIPE)
+        password = []
+        for i in range(length):
+            password.insert(i, random.choice(characters))
+        return ''.join(password)
+
+
+    def windows_epoch_time_converter(self, time_type, expires):
+        '''Convert from Epoch to Windows or from Windows
+        to Epoch - Thanks Rusty Myers for determine Windows vs.
+        Epoch Time @rustymyers'''
+        if time_type == 'epoch':
+            # Convert Windows Time to Epoch Time
+            format_expiration_time = int(self.expirationtime[0])\
+                                          /10000000-11644473600
+            format_expiration_time = datetime.fromtimestamp\
+                                          (format_expiration_time)
+            return format_expiration_time
+        elif time_type == 'windows':
             # Convert the time back from Time Stamp to Epoch to Windows
             # and add 30 days onto the time
-            new_expiration_time = (now + timedelta(days=exp_days))
-            format_new_expiration_time = new_expiration_time
+            new_expiration_time = (self.now + timedelta(days=expires))
+            formatted_new_expiration_time = new_expiration_time
             new_expiration_time = new_expiration_time.timetuple()
             new_expiration_time = mktime(new_expiration_time)
             new_expiration_time = ((new_expiration_time+11644473600)*10000000)
-            # Set the Expiration Time to 30 days from now in AD
-            logging.info('Removing expiration time from Active Directory...')
-            check_output(['/usr/bin/dscl', ad_path, '-delete', computer_path,
-                          attributes[1]], stderr=PIPE)
-            logging.info('Settings new expiration time...')
-            check_output(['/usr/bin/dscl', ad_path, '-append', computer_path,
-                          attributes[1], str(int(new_expiration_time))],
-                         stderr=PIPE)
-            logging.info('Password change has been completed. '
-                         'New expiration date is %s',
-                         format_new_expiration_time)
-        except StandardError as error:
-            logging.error(error)
-            exit(1)
-    else:
-        # Log that a password change is not necessary at this time
-        logging.info('Password change not necessary at this time as'
-                     ' the expiration date is %s', format_expiration_time)
+            return (new_expiration_time, formatted_new_expiration_time)
 
 
-def get_config_settings(preference_key, preference_file=BUNDLE_ID):
-    '''Function to retrieve configuration settings from
-    /Library/Preferences or /Library/Managed Preferences'''
-    preference_value = CFPreferencesCopyAppValue(preference_key,
-                                                 preference_file)
-    if preference_value == None:
-        preference_value = DEFAULT_PREFERENCES.get(preference_key)
-    return preference_value
+    def password_check(self):
+        '''Perform a password check and change the local
+        admin password and write it to Active Directory if
+        needed - Thanks to Tom Burgin and Ben Toms - @tomjburgin, @macmuleblog'''
+        local_admin = LAPS.get_config_settings('LocalAdminAccount')
+        exp_days = LAPS.get_config_settings('DaysTillExpiration')
+        pass_length = LAPS.get_config_settings('PasswordLength')
+        password = LAPS.make_random_password(pass_length)
+        formatted_expiration_time = \
+            LAPS.windows_epoch_time_converter('epoch', exp_days)
+        # Determine if the password expired and then change it
+        if formatted_expiration_time < self.now:
+            # Log that the password change is being started
+            logging.info('Password change required. Performing password change..')
+            try:
+                # Set new random password in Active Directory
+                self.computer_record.setValue_forAttribute_error_\
+                (password, self.lapsattributes[0], None)
+                # Change the local admin password
+                logging.info('Setting random password for local'
+                             ' admin account %s', local_admin)
+                # Connect to Local Node
+                local_node, error = ODNode.nodeWithSession_name_error_\
+                (ODSession.defaultSession(), '/Local/Default', None)
+                # Pull Local Administrator Record
+                local_admin, error = local_node\
+                .recordWithRecordType_name_attributes_error_\
+                (kODRecordTypeUsers, local_admin, None, None)
+                # Change the password for the account
+                local_admin.changePassword_toPassword_error_\
+                (None, password, None)
+                # Convert Time to Windows Time to prepare
+                # for new expiration time to be written to AD
+                new_expires = dict()
+                new_expires[0], new_expires[1] = \
+                LAPS.windows_epoch_time_converter('windows', exp_days)
+                # Set the Expiration Time to 30 days from now in AD
+                self.computer_record.setValue_forAttribute_error_\
+                (str(int(new_expires[0])), self.lapsattributes[1], None)
+                logging.info('Password change has been completed. '
+                             'New expiration date is %s',
+                             new_expires[1])
+            # pylint: disable=W0703
+            except Exception as error:
+                logging.error(error)
+                exit(1)
+        else:
+            # Log that a password change is not necessary at this time
+            logging.info('Password change not necessary at this time as'
+                         ' the expiration date is %s', formatted_expiration_time)
+            exit(0)
 
-if __name__ == '__main__':
-    main()
+LAPS = macOSLAPS()
+LAPS.connect_to_ad()
+LAPS.password_check()
