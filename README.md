@@ -46,10 +46,10 @@ changing the password to a random value.
 
 Credits
 --------------
-Rusty Myers - For helping to determine that Windows has its own time method vs
+* Rusty Myers - For helping to determine that Windows has its own time method vs
 Epoch time
-Michael Lynn - For critiquing and assisting with generating the random password
-Ben Toms - For sharing code from ADPassMon to query Active Directory with Open
+* Michael Lynn - For critiquing and assisting with generating the random password
+* Ben Toms - For sharing code from ADPassMon to query Active Directory with Open
 Directory
-Tom Burgin - For showing me the benefits and how to use Open Directory with Python
-Per Olofsson - For also assisting with Open Directory commands
+* Tom Burgin - For showing me the benefits and how to use Open Directory with Python
+* Per Olofsson - For also assisting with Open Directory commands
