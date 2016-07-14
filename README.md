@@ -53,3 +53,4 @@ Epoch time
 Directory
 * Tom Burgin - For showing me the benefits and how to use Open Directory with Python
 * Per Olofsson - For also assisting with Open Directory commands
+* Clayton Burlison - For keeping my lack of markdown skills in check
