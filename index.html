@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>macOSLAPS by joshua-d-miller</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">macOSLAPS</h1>
+      <h2 class="project-tagline">A python script that will change a local adminsitrator password to a random generated password. Similar behavior to LAPS for Windows</h2>
+      <a href="https://github.com/joshua-d-miller/macOSLAPS" class="btn">View on GitHub</a>
+      <a href="https://github.com/joshua-d-miller/macOSLAPS/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/joshua-d-miller/macOSLAPS/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="macos-laps-local-administrator-password-solution" class="anchor" href="#macos-laps-local-administrator-password-solution" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>macOS LAPS (Local Administrator Password Solution)</h1>
+
+<p>Python script that utilizes Open Directory to determine if the
+local administrator password has expired as specified by the Active Directory
+attribute dsAttrTypeNative:ms-Mcs-AdmPwdExpirationTime. If this is the case
+then a new randomly generated password will be set for the local admin account
+and a new expiration date will be set. The LAPS password is stored in the
+Active Directory attribute dsAttrTypeNative:ms-Mcs-AdmPwd. This attribute can
+only be read by those designated to view the attribute. The computer record
+can write to this attribute but it cannot read.</p>
+
+<h2>
+<a id="requirements" class="anchor" href="#requirements" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Requirements</h2>
+
+<p>The following parameters must be set or the application will use the defaults:</p>
+
+<p><strong>LocalAdminAccount</strong> - Local Administrator Account. Default is 'admin'<br>
+<strong>DaysTillExpiration</strong> - Expiration date of random password. Default is 60 Days<br>
+<strong>PasswordLength</strong> - Length of randomly generated password. Default is 8  </p>
+
+<p>These parameters are set in the location /Libary/Preferences/edu.psu.macoslaps.plist
+or you can use your MDM's Custom Settings to set these values.</p>
+
+<h2>
+<a id="installation-instructions" class="anchor" href="#installation-instructions" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Installation Instructions</h2>
+
+<p>At this time you can clone the repo or download a zip of the repo or you can
+use the package created using Packages to install. This script will run
+3 times a day between 8 A.M. and 5 P.M.</p>
+
+<h2>
+<a id="logging" class="anchor" href="#logging" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Logging</h2>
+
+<p>The script will also perform logging so that you know when the password is changed
+and its new expiration date or when the current unchanged password will expire. This
+file is stored in /Library/Logs/ as macOSLAPS.log</p>
+
+<h2>
+<a id="feedback" class="anchor" href="#feedback" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Feedback</h2>
+
+<p>I have only so far tested this in my environment so I would love for other people
+to test this and determine if it also fits their environment.</p>
+
+<h2>
+<a id="keychain" class="anchor" href="#keychain" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Keychain</h2>
+
+<p>I'd like to get some feedback on how we should handle the keychain since we are
+changing the password to a random value.</p>
+
+<h2>
+<a id="credits" class="anchor" href="#credits" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Credits</h2>
+
+<ul>
+<li>Rusty Myers - For helping to determine that Windows has its own time method vs
+Epoch time</li>
+<li>Michael Lynn - For critiquing and assisting with generating the random password</li>
+<li>Ben Toms - For sharing code from ADPassMon to query Active Directory with Open
+Directory</li>
+<li>Tom Burgin - For showing me the benefits and how to use Open Directory with Python</li>
+<li>Per Olofsson - For also assisting with Open Directory commands</li>
+<li>Clayton Burlison - For keeping my lack of markdown skills in check</li>
+</ul>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/joshua-d-miller/macOSLAPS">macOSLAPS</a> is maintained by <a href="https://github.com/joshua-d-miller">joshua-d-miller</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
