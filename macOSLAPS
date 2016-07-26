@@ -24,9 +24,9 @@ import random
 # pylint: disable=E0611
 from Foundation import CFPreferencesCopyAppValue
 from OpenDirectory import ODSession, ODNode, kODRecordTypeComputers, \
-                          kODRecordTypeUsers
+    kODRecordTypeUsers
 from SystemConfiguration import SCDynamicStoreCreate, \
-                                SCDynamicStoreCopyValue
+    SCDynamicStoreCopyValue
 
 
 class macOSLAPS(object):
@@ -37,7 +37,7 @@ class macOSLAPS(object):
     bundleid = 'edu.psu.macoslaps'
     defaultpreferences = {
         'LocalAdminAccount': 'admin',
-        'PasswordLength': 8,
+        'PasswordLength': 12,
         'DaysTillExpiration': 60
     }
     # Active Directory Attributes
@@ -51,7 +51,6 @@ class macOSLAPS(object):
                         level=logging.DEBUG,
                         format='%(asctime)s|%(levelname)s:%(message)s')
 
-
     def get_config_settings(self, preference_key):
         '''Function to retrieve configuration settings from
         /Library/Preferences or /Library/Managed Preferences
@@ -59,10 +58,9 @@ class macOSLAPS(object):
         preference_file = self.bundleid
         preference_value = CFPreferencesCopyAppValue(preference_key,
                                                      preference_file)
-        if preference_value == None:
+        if preference_value is None:
             preference_value = self.defaultpreferences.get(preference_key)
         return preference_value
-
 
     def connect_to_ad(self):
         '''Function to connect and pull information from Active Directory
@@ -73,35 +71,38 @@ class macOSLAPS(object):
             # Create Net Config
             net_config = SCDynamicStoreCreate(None, "net", None, None)
             # Get Active Directory Info
-            ad_info = \
-            dict(SCDynamicStoreCopyValue
-                 (net_config, 'com.apple.opendirectoryd.ActiveDirectory'))
+            ad_info = dict(
+                SCDynamicStoreCopyValue(
+                    net_config, 'com.apple.opendirectoryd.ActiveDirectory'))
             # Create Active Directory Path
             self.adpath = '{0:}/{1:}'.format(ad_info['NodeName'],
                                              ad_info['DomainNameDns'])
             # Computer Path
-            self.computerpath = 'Computers/{0:}'.format(ad_info['TrustAccount'])
+            self.computerpath = 'Computers/{0:}'.format(
+                                ad_info['TrustAccount'])
             # Use Open Directory To Connect to Active Directory
-            node, error = ODNode.nodeWithSession_name_error_\
-            (ODSession.defaultSession(), self.adpath, None)
+            node, error = ODNode.nodeWithSession_name_error_(
+                ODSession.defaultSession(), self.adpath, None)
             # Grab the Computer Record
-            self.computer_record, error = \
-            node.recordWithRecordType_name_attributes_error_\
-            (kODRecordTypeComputers, ad_info['TrustAccount'], None, None)
+            self.computer_record, error = node.\
+                recordWithRecordType_name_attributes_error_(
+                    kODRecordTypeComputers, ad_info
+                    ['TrustAccount'], None, None)
             # Convert to Readable Values
             values, error = self.computer_record.\
-            recordDetailsForAttributes_error_(None, None)
+                recordDetailsForAttributes_error_(None, None)
             # LAPS Attributes
             self.lapsattributes[0] = 'dsAttrTypeNative:ms-Mcs-AdmPwd'
-            self.lapsattributes[1] = 'dsAttrTypeNative:ms-Mcs-AdmPwdExpirationTime'
+            self.lapsattributes[1] = \
+                'dsAttrTypeNative:ms-Mcs-AdmPwdExpirationTime'
             # Get Expiration Time of Password
-            self.expirationtime = values[self.lapsattributes[1]]
-            # If this machine has never had LAPS enabled set
-            # a default expiration time of 1/1/2001
-            if self.expirationtime == '':
-                logging.info('Machine has never had LAPS set. Setting'
-                             ' default expiration date of 01/01/2001 to force'
-                             ' a password change...')
+            try:
+                self.expirationtime = values[self.lapsattributes[1]]
+            except Exception:
+                logging.info('There has never been a random password generated'
+                             ' for this device. Setting a default expiration'
+                             ' date of 01/01/2001 in Active Directory to'
+                             ' force a password change...')
                 self.expirationtime = '126227988000000000'
         # pylint: disable=W0703
         except Exception as error:
@@ -119,7 +120,6 @@ class macOSLAPS(object):
             password.insert(i, random.choice(characters))
         return ''.join(password)
 
-
     def windows_epoch_time_converter(self, time_type, expires):
         '''Convert from Epoch to Windows or from Windows
         to Epoch - Thanks Rusty Myers for determine Windows vs.
@@ -127,9 +127,9 @@ class macOSLAPS(object):
         if time_type == 'epoch':
             # Convert Windows Time to Epoch Time
             format_expiration_time = int(self.expirationtime[0])\
-                                          /10000000-11644473600
-            format_expiration_time = datetime.fromtimestamp\
-                                          (format_expiration_time)
+                / 10000000 - 11644473600
+            format_expiration_time = datetime.fromtimestamp(
+                format_expiration_time)
             return format_expiration_time
         elif time_type == 'windows':
             # Convert the time back from Time Stamp to Epoch to Windows
@@ -138,14 +138,15 @@ class macOSLAPS(object):
             formatted_new_expiration_time = new_expiration_time
             new_expiration_time = new_expiration_time.timetuple()
             new_expiration_time = mktime(new_expiration_time)
-            new_expiration_time = ((new_expiration_time+11644473600)*10000000)
+            new_expiration_time = ((new_expiration_time + 11644473600) *
+                                   10000000)
             return (new_expiration_time, formatted_new_expiration_time)
-
 
     def password_check(self):
         '''Perform a password check and change the local
         admin password and write it to Active Directory if
-        needed - Thanks to Tom Burgin and Ben Toms - @tomjburgin, @macmuleblog'''
+        needed - Thanks to Tom Burgin and Ben Toms
+                           @tomjburgin, @macmuleblog'''
         local_admin = LAPS.get_config_settings('LocalAdminAccount')
         exp_days = LAPS.get_config_settings('DaysTillExpiration')
         pass_length = LAPS.get_config_settings('PasswordLength')
@@ -155,32 +156,33 @@ class macOSLAPS(object):
         # Determine if the password expired and then change it
         if formatted_expiration_time < self.now:
             # Log that the password change is being started
-            logging.info('Password change required. Performing password change..')
+            logging.info('Password change required.'
+                         ' Performing password change...')
             try:
                 # Set new random password in Active Directory
-                self.computer_record.setValue_forAttribute_error_\
-                (password, self.lapsattributes[0], None)
+                self.computer_record.setValue_forAttribute_error_(
+                    password, self.lapsattributes[0], None)
                 # Change the local admin password
                 logging.info('Setting random password for local'
-                             ' admin account %s', local_admin)
+                             ' admin account %s...', local_admin)
                 # Connect to Local Node
-                local_node, error = ODNode.nodeWithSession_name_error_\
-                (ODSession.defaultSession(), '/Local/Default', None)
+                local_node, error = ODNode.nodeWithSession_name_error_(
+                    ODSession.defaultSession(), '/Local/Default', None)
                 # Pull Local Administrator Record
-                local_admin, error = local_node\
-                .recordWithRecordType_name_attributes_error_\
-                (kODRecordTypeUsers, local_admin, None, None)
+                local_admin, error = local_node.\
+                    recordWithRecordType_name_attributes_error_(
+                        kODRecordTypeUsers, local_admin, None, None)
                 # Change the password for the account
-                local_admin.changePassword_toPassword_error_\
-                (None, password, None)
+                local_admin.changePassword_toPassword_error_(
+                    None, password, None)
                 # Convert Time to Windows Time to prepare
                 # for new expiration time to be written to AD
                 new_expires = dict()
-                new_expires[0], new_expires[1] = \
-                LAPS.windows_epoch_time_converter('windows', exp_days)
+                new_expires[0], new_expires[1] = LAPS.\
+                    windows_epoch_time_converter('windows', exp_days)
                 # Set the Expiration Time to 30 days from now in AD
-                self.computer_record.setValue_forAttribute_error_\
-                (str(int(new_expires[0])), self.lapsattributes[1], None)
+                self.computer_record.setValue_forAttribute_error_(
+                    str(int(new_expires[0])), self.lapsattributes[1], None)
                 logging.info('Password change has been completed. '
                              'New expiration date is %s',
                              new_expires[1])
@@ -191,7 +193,8 @@ class macOSLAPS(object):
         else:
             # Log that a password change is not necessary at this time
             logging.info('Password change not necessary at this time as'
-                         ' the expiration date is %s', formatted_expiration_time)
+                         ' the expiration date is %s',
+                         formatted_expiration_time)
             exit(0)
 
 LAPS = macOSLAPS()
