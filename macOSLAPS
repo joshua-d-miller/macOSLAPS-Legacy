@@ -13,10 +13,12 @@ __________________________________________________________________________
 | to retrieve it.                                                        |
 |________________________________________________________________________|
 Joshua D. Miller - josh@psu.edu - The Pennsylvania State University
-Script was Last Updated July 14, 2016'''
+Script was Last Updated August 16, 2016'''
 # pylint: disable=C0103
 from __future__ import print_function
 from datetime import datetime, timedelta
+import shutil
+from os import path
 from string import ascii_letters, punctuation, digits
 from time import mktime
 import logging
@@ -38,7 +40,9 @@ class macOSLAPS(object):
     defaultpreferences = {
         'LocalAdminAccount': 'admin',
         'PasswordLength': 12,
-        'DaysTillExpiration': 60
+        'DaysTillExpiration': 60,
+        'RemoveKeyChain': True,
+        'RemovePassChars': ''
     }
     # Active Directory Attributes
     adpath = ''
@@ -115,6 +119,10 @@ class macOSLAPS(object):
         Thanks Mike Lynn - @frogor'''
         # Characters used for random password
         characters = ascii_letters + punctuation + digits
+        remove_pass_characters = LAPS.get_config_settings('RemovePassChars')
+        # Remove Characters if specified
+        if remove_pass_characters:
+            characters = characters.translate(None, remove_pass_characters)
         password = []
         for i in range(length):
             password.insert(i, random.choice(characters))
@@ -150,6 +158,7 @@ class macOSLAPS(object):
         local_admin = LAPS.get_config_settings('LocalAdminAccount')
         exp_days = LAPS.get_config_settings('DaysTillExpiration')
         pass_length = LAPS.get_config_settings('PasswordLength')
+        keychain_remove = LAPS.get_config_settings('RemoveKeyChain')
         password = LAPS.make_random_password(pass_length)
         formatted_expiration_time = \
             LAPS.windows_epoch_time_converter('epoch', exp_days)
@@ -169,11 +178,11 @@ class macOSLAPS(object):
                 local_node, error = ODNode.nodeWithSession_name_error_(
                     ODSession.defaultSession(), '/Local/Default', None)
                 # Pull Local Administrator Record
-                local_admin, error = local_node.\
+                local_admin_change, error = local_node.\
                     recordWithRecordType_name_attributes_error_(
                         kODRecordTypeUsers, local_admin, None, None)
                 # Change the password for the account
-                local_admin.changePassword_toPassword_error_(
+                local_admin_change.changePassword_toPassword_error_(
                     None, password, None)
                 # Convert Time to Windows Time to prepare
                 # for new expiration time to be written to AD
@@ -186,6 +195,24 @@ class macOSLAPS(object):
                 logging.info('Password change has been completed. '
                              'New expiration date is %s',
                              new_expires[1])
+                if keychain_remove is True:
+                    local_admin_path = '/Users/{0:}/Library/Keychains'.\
+                        format(local_admin)
+                    if path.exists(local_admin_path):
+                        shutil.rmtree(local_admin_path)
+                        logging.info('Removed keychains for local '
+                                     'administrator account {0:}.'
+                                     .format(local_admin))
+                    else:
+                        logging.info('The keychain directory for '
+                                     '{0:} does not exist. Keychain '
+                                     'removal not required...'
+                                     .format(local_admin))
+                else:
+                    logging.info('KeyChain has NOT been modified. Keep '
+                                 'in mind that this may cause keychain '
+                                 'prompts and the old password may not '
+                                 'be accessible.')
             # pylint: disable=W0703
             except Exception as error:
                 logging.error(error)
