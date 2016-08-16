@@ -1,6 +1,5 @@
 macOS LAPS (Local Administrator Password Solution)
 ==================================================
-
 Python script that utilizes Open Directory to determine if the
 local administrator password has expired as specified by the Active Directory
 attribute dsAttrTypeNative:ms-Mcs-AdmPwdExpirationTime. If this is the case
@@ -15,9 +14,11 @@ Requirements
 
 The following parameters must be set or the application will use the defaults:
 
-**LocalAdminAccount** - Local Administrator Account. Default is 'admin'  
-**DaysTillExpiration** - Expiration date of random password. Default is 60 Days  
-**PasswordLength** - Length of randomly generated password. Default is 12  
+**LocalAdminAccount** - Local Administrator Account. Default is 'admin'
+**DaysTillExpiration** - Expiration date of random password. Default is 60 Days
+**PasswordLength** - Length of randomly generated password. Default is 12
+**RemoveKeyChain** - Remove the local admin keychains after password change. (Recommended)
+**RemovePassChars** - Exclude any characters you'd like from the randomly generated password (In String format)
 
 These parameters are set in the location /Libary/Preferences/edu.psu.macoslaps.plist
 or you can use your MDM's Custom Settings to set these values.
