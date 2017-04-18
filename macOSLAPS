@@ -29,6 +29,7 @@ from OpenDirectory import ODSession, ODNode, kODRecordTypeComputers, \
     kODRecordTypeUsers
 from SystemConfiguration import SCDynamicStoreCreate, \
     SCDynamicStoreCopyValue
+import unicodedata
 
 
 class macOSLAPS(object):
@@ -64,6 +65,8 @@ class macOSLAPS(object):
                                                      preference_file)
         if preference_value is None:
             preference_value = self.defaultpreferences.get(preference_key)
+        if isinstance(preference_value, unicode):
+            preference_value = unicodedata.normalize('NFKD', preference_value).encode('ascii','ignore')
         return preference_value
 
     def connect_to_ad(self):
