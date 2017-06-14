@@ -23,11 +23,16 @@ The following parameters must be set or the application will use the defaults:
 These parameters are set in the location /Libary/Preferences/edu.psu.macoslaps.plist
 or you can use your MDM's Custom Settings to set these values.
 
+Exclusions
+----------------
+As pointed out by one of my fellow colleagues, the **'** key on macOS cannot be used on Windows without opening
+the character map to enter it. Since this is very detriment to using a LAPS password from a Windows client I have made this key excluded by default.
+
 Installation Instructions
 -------------------------
 At this time you can clone the repo or download a zip of the repo or you can
 use the package created using Packages to install. This script will run
-3 times a day between 8 A.M. and 5 P.M.
+3 times a day between 8 A.M. and 5 P.M. at 9 A.M., 1 P.M. and 4 P.M.
 
 Logging
 -------
@@ -37,13 +42,11 @@ file is stored in /Library/Logs/ as macOSLAPS.log
 
 Feedback
 --------
-I have only so far tested this in my environment so I would love for other people
-to test this and determine if it also fits their environment.
+All feedback I have received is positive so far but please continue testing this in your environment and let me know the results.
 
-Keychain
+Local Admin Keychain
 --------
-I'd like to get some feedback on how we should handle the keychain since we are
-changing the password to a random value.
+By default, the local admin you choose has its keychain deleted since we wouldn't know the randomized password.
 
 Credits
 --------------
